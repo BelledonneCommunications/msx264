@@ -57,7 +57,7 @@ if test x$ac_cv_c_bigendian = xyes ; then
 fi
 
 if test $GCC = yes && test $wall_werror = yes;  then
-	CFLAGS="$CFLAGS -Werror "
+	CFLAGS="$CFLAGS -Werror -Wextra "
 fi
 
 PKG_CHECK_MODULES(MEDIASTREAMER, mediastreamer >= 2.7.0)
