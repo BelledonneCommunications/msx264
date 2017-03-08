@@ -43,7 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define SPECIAL_HIGHRES_BUILD_CRF 28
 
 
-#if defined(ANDROID) || (TARGET_OS_IPHONE == 1) || defined(__arm__)
+#if defined(__ANDROID__) || (TARGET_OS_IPHONE == 1) || defined(__arm__)
 	#define MS_X264_CONF(required_bitrate, bitrate_limit, resolution, fps_pc, cpus_pc, fps_mobile, cpus_mobile) \
 		{ required_bitrate, bitrate_limit, { MS_VIDEO_SIZE_ ## resolution ## _W, MS_VIDEO_SIZE_ ## resolution ## _H },fps_mobile, cpus_mobile, NULL }
 #else
@@ -162,7 +162,7 @@ static void enc_preprocess(MSFilter *f){
 	d->packer=rfc3984_new();
 	rfc3984_set_mode(d->packer,d->mode);
 	rfc3984_enable_stap_a(d->packer,FALSE);
-#if defined(__arm__) || defined(ANDROID)
+#if defined(__arm__) || defined(__ANDROID__)
 	if (x264_param_default_preset(params,"superfast"/*"ultrafast"*/,"zerolatency")) {
 		ms_error("Cannot apply default x264 configuration");
 	}
