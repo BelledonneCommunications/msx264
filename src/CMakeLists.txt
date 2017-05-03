@@ -20,7 +20,16 @@
 #
 ############################################################################
 
+if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
+	include("${EP_ms2_CONFIG_DIR}/Mediastreamer2Config.cmake")
+	include("${EP_ortp_CONFIG_DIR}/OrtpConfig.cmake")
+else()
+	find_package(Mediastreamer2 REQUIRED)
+	find_package(ORTP REQUIRED)
+endif()
+
 set(LIBS
+	${ORTP_LIBRARIES}
 	${MEDIASTREAMER2_LIBRARIES}
 	${X264_LIBRARIES}
 )
@@ -38,9 +47,19 @@ if(ENABLE_STATIC)
 	)
 endif()
 if(ENABLE_SHARED)
-	add_library(msx264 MODULE ${SOURCE_FILES})
+	if(NOT IOS)
+		add_library(msx264 MODULE ${SOURCE_FILES})
+	else()
+		add_library(msx264 SHARED ${SOURCE_FILES})
+	endif()
 	set_target_properties(msx264 PROPERTIES LINKER_LANGUAGE CXX LINK_FLAGS "${LINK_FLAGS}")
 	target_link_libraries(msx264 ${LIBS})
+	if(IOS)
+		set_target_properties(msx264 PROPERTIES
+			FRAMEWORK TRUE
+			MACOSX_FRAMEWORK_IDENTIFIER com.belledonne-communications.msx264
+		) 
+	endif()
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 			install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/libmsx264.pdb
@@ -54,6 +73,7 @@ if(ENABLE_SHARED)
 		RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/mediastreamer/plugins
 		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/mediastreamer/plugins
 		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/mediastreamer/plugins
+		FRAMEWORK DESTINATION Frameworks
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 	)
 endif()
