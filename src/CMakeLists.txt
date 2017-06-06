@@ -55,9 +55,12 @@ if(ENABLE_SHARED)
 	set_target_properties(msx264 PROPERTIES LINKER_LANGUAGE CXX LINK_FLAGS "${LINK_FLAGS}")
 	target_link_libraries(msx264 ${LIBS})
 	if(IOS)
+		set(MIN_OS ${LINPHONE_IOS_DEPLOYMENT_TARGET})
+		set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/osx/")
 		set_target_properties(msx264 PROPERTIES
 			FRAMEWORK TRUE
-			MACOSX_FRAMEWORK_IDENTIFIER com.belledonne-communications.msx264
+			MACOSX_FRAMEWORK_IDENTIFIER org.linphone.msx264
+  			MACOSX_FRAMEWORK_INFO_PLIST Info.plist.in
 		) 
 	endif()
 	if(MSVC)
