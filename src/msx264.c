@@ -159,7 +159,7 @@ static void enc_preprocess(MSFilter *f){
 	EncData *d=(EncData*)f->data;
 	x264_param_t *params=&d->params;
 
-	d->packer=rfc3984_new();
+	d->packer=rfc3984_new_with_factory(f->factory);
 	rfc3984_set_mode(d->packer,d->mode);
 	rfc3984_enable_stap_a(d->packer,FALSE);
 #if defined(__arm__) || defined(__ANDROID__)
