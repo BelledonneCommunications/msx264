@@ -338,6 +338,7 @@ static int enc_add_fmtp(MSFilter *f, void *arg){
 }
 
 static int enc_req_vfu(MSFilter *f, void *arg){
+	MS_UNUSED(arg);
 	EncData *d=(EncData*)f->data;
 	d->generate_keyframe=TRUE;
 	return 0;
