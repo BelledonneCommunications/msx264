@@ -293,20 +293,22 @@ static void enc_postprocess(MSFilter *f){
 	}
 }
 
-static int enc_get_br(MSFilter *f, void*arg){
-	EncData *d=(EncData*)f->data;
-	*(int*)arg=d->vconf.required_bitrate;
-	return 0;
-}
-
 static int enc_set_configuration(MSFilter *f, void *arg) {
 	EncData *d = (EncData *)f->data;
 	const MSVideoConfiguration *vconf = (const MSVideoConfiguration *)arg;
+	MSVideoSize vsize = d->vconf.vsize;
+
 	if (vconf != &d->vconf) memcpy(&d->vconf, vconf, sizeof(MSVideoConfiguration));
 
 	if (d->vconf.required_bitrate > d->vconf.bitrate_limit)
 		d->vconf.required_bitrate = d->vconf.bitrate_limit;
 	if (d->enc) {
+		/* Do not change video size if encoder is running */
+		if (!ms_video_size_equal(d->vconf.vsize, vsize)) {
+			ms_warning("Video configuration: cannot change video size when encoder is running, actual=%dx%d, wanted=%dx%d", vsize.width, vsize.height, d->vconf.vsize.width, d->vconf.vsize.height);
+			d->vconf.vsize = vsize;
+		}
+
 		ms_filter_lock(f);
 		apply_bitrate(f);
 		if (x264_encoder_reconfig(d->enc, &d->params) != 0) {
@@ -320,48 +322,10 @@ static int enc_set_configuration(MSFilter *f, void *arg) {
 	return 0;
 }
 
-static int enc_set_br(MSFilter *f, void *arg) {
+static int enc_get_configuration(MSFilter *f, void *arg) {
 	EncData *d = (EncData *)f->data;
-	int br = *(int *)arg;
-	if (d->enc != NULL) {
-		/* Encoding is already ongoing, do not change video size, only bitrate. */
-		d->vconf.required_bitrate = br;
-		enc_set_configuration(f,&d->vconf);
-	} else {
-		MSVideoConfiguration best_vconf = ms_video_find_best_configuration_for_bitrate(d->vconf_list, br,  ms_factory_get_cpu_count(f->factory));
-		enc_set_configuration(f, &best_vconf);
-	}
-	return 0;
-}
-
-static int enc_set_fps(MSFilter *f, void *arg){
-	EncData *d=(EncData*)f->data;
-	d->vconf.fps=*(float*)arg;
-	enc_set_configuration(f, &d->vconf);
-	return 0;
-}
-
-static int enc_get_fps(MSFilter *f, void *arg){
-	EncData *d=(EncData*)f->data;
-	*(float*)arg=d->vconf.fps;
-	return 0;
-}
-
-static int enc_get_vsize(MSFilter *f, void *arg){
-	EncData *d=(EncData*)f->data;
-	*(MSVideoSize*)arg=d->vconf.vsize;
-	return 0;
-}
-
-static int enc_set_vsize(MSFilter *f, void *arg){
-	MSVideoConfiguration best_vconf;
-	EncData *d = (EncData *)f->data;
-	MSVideoSize *vs = (MSVideoSize *)arg;
-	best_vconf = ms_video_find_best_configuration_for_size(d->vconf_list, *vs,  ms_factory_get_cpu_count(f->factory));
-	d->vconf.vsize = *vs;
-	d->vconf.fps = best_vconf.fps;
-	d->vconf.bitrate_limit = best_vconf.bitrate_limit;
-	enc_set_configuration(f, &d->vconf);
+	MSVideoConfiguration *vconf = (MSVideoConfiguration *)arg;
+	memcpy(vconf, &d->vconf, sizeof(MSVideoConfiguration));
 	return 0;
 }
 
@@ -377,6 +341,7 @@ static int enc_add_fmtp(MSFilter *f, void *arg){
 }
 
 static int enc_req_vfu(MSFilter *f, void *arg){
+	MS_UNUSED(arg);
 	EncData *d=(EncData*)f->data;
 	d->generate_keyframe=TRUE;
 	return 0;
@@ -391,16 +356,11 @@ static int enc_get_configuration_list(MSFilter *f, void *data) {
 
 
 static MSFilterMethod enc_methods[] = {
-	{ MS_FILTER_SET_FPS,                       enc_set_fps                },
-	{ MS_FILTER_SET_BITRATE,                   enc_set_br                 },
-	{ MS_FILTER_GET_BITRATE,                   enc_get_br                 },
-	{ MS_FILTER_GET_FPS,                       enc_get_fps                },
-	{ MS_FILTER_GET_VIDEO_SIZE,                enc_get_vsize              },
-	{ MS_FILTER_SET_VIDEO_SIZE,                enc_set_vsize              },
 	{ MS_FILTER_ADD_FMTP,                      enc_add_fmtp               },
 	{ MS_FILTER_REQ_VFU,                       enc_req_vfu                },
 	{ MS_VIDEO_ENCODER_REQ_VFU,                enc_req_vfu                },
 	{ MS_VIDEO_ENCODER_GET_CONFIGURATION_LIST, enc_get_configuration_list },
+	{ MS_VIDEO_ENCODER_GET_CONFIGURATION,      enc_get_configuration      },
 	{ MS_VIDEO_ENCODER_SET_CONFIGURATION,      enc_set_configuration      },
 	{ 0,                                       NULL                       }
 };
